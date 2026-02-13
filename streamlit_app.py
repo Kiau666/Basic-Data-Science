@@ -14,69 +14,45 @@ st.set_page_config(
 # --- CUSTOM CSS (THEMA NARUTO) ---
 st.markdown("""
     <style>
-    /* Background & Font */
     .stApp {
-        background: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), 
+        background: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)), 
                     url("https://images.alphacoders.com/134/1341995.png");
         background-size: cover;
     }
-    
-    /* Title Styling */
     .main-title {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        color: #E8691E; /* Naruto Orange */
+        color: #E8691E;
         text-align: center;
         text-shadow: 2px 2px #203A43;
         font-weight: bold;
-        font-size: 50px;
+        font-size: 45px;
     }
-
-    /* Card Styling */
     div.stButton > button:first-child {
-        background-color: #E8691E;
-        color: white;
-        border-radius: 20px;
-        border: 2px solid #203A43;
-        padding: 10px 24px;
-        font-weight: bold;
-        transition: 0.3s;
-        width: 100%;
-    }
-    
-    div.stButton > button:first-child:hover {
-        background-color: #203A43;
-        color: #E8691E;
-        border: 2px solid #E8691E;
-    }
-
-    /* Sidebar Styling */
-    .css-1d391kg {
-        background-color: #203A43;
-    }
-
-    /* Success Box */
-    .stSuccess {
-        background-color: rgba(232, 105, 30, 0.2);
-        border: 1px solid #E8691E;
-        color: #203A43;
+        background-color: #E8691E !important;
+        color: white !important;
+        border-radius: 15px !important;
+        font-weight: bold !important;
+        width: 100% !important;
     }
     </style>
-    """, unsafe_state=True)
+    """, unsafe_allow_html=True)
 
 # --- LOAD MODEL ---
 @st.cache_resource
 def load_model_and_scaler():
-    # Pastikan file ini ada di direktori yang sama
-    with open('model_gb.pkl', 'rb') as file:
-        model = pickle.load(file)
-    with open('scaler.pkl', 'rb') as file:
-        scaler = pickle.load(file)
-    return model, scaler
+    try:
+        with open('model_gb.pkl', 'rb') as file:
+            model = pickle.load(file)
+        with open('scaler.pkl', 'rb') as file:
+            scaler = pickle.load(file)
+        return model, scaler
+    except FileNotFoundError:
+        return None, None
 
-try:
-    model, scaler = load_model_and_scaler()
-except FileNotFoundError:
-    st.error("⚠️ File model_gb.pkl atau scaler.pkl tidak ditemukan! Pastikan file model sudah diupload.")
+model, scaler = load_model_and_scaler()
+
+if model is None:
+    st.error("❌ File model_gb.pkl atau scaler.pkl tidak ditemukan!")
+    st.stop()
 
 # --- DATA CONFIG ---
 feature_cols_final = ['Usia', 'Durasi_Jam', 'Nilai_Ujian', 'Pendidikan', 'Jurusan',
@@ -87,85 +63,50 @@ education_classes = np.array(['D3', 'S1', 'SMA', 'SMK'])
 major_classes = np.array(['Administrasi', 'Desain Grafis', 'Otomotif', 'Teknik Las', 'Teknik Listrik'])
 
 # --- UI LAYOUT ---
-st.markdown('<p class="main-title">🍥 Papan Misi Konoha: Prediksi Ryo</p>', unsafe_allow_html=True)
-st.write("<p style='text-align: center;'>Tentukan masa depan Shinobi-mu! Masukkan data untuk memprediksi gaji pertama (Ryo).</p>", unsafe_allow_html=True)
+st.markdown('<p class="main-title">🍥 Papan Misi Konoha: Prediksi Gaji</p>', unsafe_allow_html=True)
 st.divider()
 
-# Gunakan kolom untuk layout yang lebih rapi
-col1, col2 = st.columns([1, 1], gap="medium")
+col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("👤 Profil Shinobi")
-    usia = st.slider('Usia (Tahun)', 18, 60, 25)
-    pendidikan = st.selectbox('Tingkat Akademi (Pendidikan)', education_classes)
+    usia = st.slider('Usia', 18, 60, 25)
+    pendidikan = st.selectbox('Pendidikan', education_classes)
     jenis_kelamin = st.radio('Jenis Kelamin', ['Laki-laki', 'Wanita'], horizontal=True)
-    status_bekerja = st.radio('Status Saat Ini', ['Belum Bekerja', 'Sudah Bekerja'], horizontal=True)
 
 with col2:
-    st.subheader("📜 Spesialisasi Jutsu")
-    jurusan = st.selectbox('Bidang Keahlian (Jurusan)', major_classes)
-    durasi_jam = st.number_input('Total Jam Latihan (Durasi)', 20, 1000, 60)
-    nilai_ujian = st.slider('Skor Ujian Akhir', 50.0, 100.0, 75.0, step=0.1)
+    jurusan = st.selectbox('Jurusan', major_classes)
+    durasi_jam = st.number_input('Durasi Pelatihan (Jam)', 20, 1000, 60)
+    nilai_ujian = st.slider('Nilai Ujian', 50.0, 100.0, 75.0)
+    status_bekerja = st.radio('Status Bekerja', ['Belum Bekerja', 'Sudah Bekerja'], horizontal=True)
 
-# --- PREPROCESSING FUNCTION ---
+# --- PREPROCESSING ---
 def preprocess_new_data(data):
     new_df = pd.DataFrame([data])
-
-    def get_label_encoded_value(value, classes):
-        if value in classes:
-            return np.where(classes == value)[0][0]
-        return -1
-
-    new_df['Pendidikan'] = new_df['Pendidikan'].apply(lambda x: get_label_encoded_value(x, education_classes))
-    new_df['Jurusan'] = new_df['Jurusan'].apply(lambda x: get_label_encoded_value(x, major_classes))
-
-    one_hot_feature_cols = [
-        'Jenis_Kelamin_Laki-laki', 'Jenis_Kelamin_Wanita',
-        'Status_Bekerja_Belum Bekerja', 'Status_Bekerja_Sudah Bekerja'
-    ]
-
-    for col in one_hot_feature_cols:
-        new_df[col] = 0
-
-    if data['Jenis_Kelamin'] == 'Laki-laki':
-        new_df['Jenis_Kelamin_Laki-laki'] = 1
-    elif data['Jenis_Kelamin'] == 'Wanita':
-        new_df['Jenis_Kelamin_Wanita'] = 1
-
-    if data['Status_Bekerja'] == 'Belum Bekerja':
-        new_df['Status_Bekerja_Belum Bekerja'] = 1
-    elif data['Status_Bekerja'] == 'Sudah Bekerja':
-        new_df['Status_Bekerja_Sudah Bekerja'] = 1
-
-    new_df = new_df.drop(columns=['Jenis_Kelamin', 'Status_Bekerja'])
-    preprocessed_input_df = new_df[feature_cols_final]
     
-    # Scaling
-    preprocessed_input_scaled_array = scaler.transform(preprocessed_input_df)
-    return pd.DataFrame(preprocessed_input_scaled_array, columns=feature_cols_final)
+    # Label Encoding manual sesuai urutan training
+    new_df['Pendidikan'] = np.where(education_classes == data['Pendidikan'])[0][0]
+    new_df['Jurusan'] = np.where(major_classes == data['Jurusan'])[0][0]
 
-# --- PREDICTION LOGIC ---
-st.write("") # Spacer
+    # One-Hot Encoding manual
+    new_df['Jenis_Kelamin_Laki-laki'] = 1 if data['Jenis_Kelamin'] == 'Laki-laki' else 0
+    new_df['Jenis_Kelamin_Wanita'] = 1 if data['Jenis_Kelamin'] == 'Wanita' else 0
+    new_df['Status_Bekerja_Belum Bekerja'] = 1 if data['Status_Bekerja'] == 'Belum Bekerja' else 0
+    new_df['Status_Bekerja_Sudah Bekerja'] = 1 if data['Status_Bekerja'] == 'Sudah Bekerja' else 0
+
+    # Ambil kolom yang sesuai urutan
+    final_input = new_df[feature_cols_final]
+    return scaler.transform(final_input)
+
+# --- TOMBOL PREDIKSI ---
 if st.button('🔥 ANALISIS JALAN NINJAKU!'):
-    new_data = {
-        'Usia': usia,
-        'Durasi_Jam': durasi_jam,
-        'Nilai_Ujian': nilai_ujian,
-        'Pendidikan': pendidikan,
-        'Jurusan': jurusan,
-        'Jenis_Kelamin': jenis_kelamin,
-        'Status_Bekerja': status_bekerja
+    input_data = {
+        'Usia': usia, 'Durasi_Jam': durasi_jam, 'Nilai_Ujian': nilai_ujian,
+        'Pendidikan': pendidikan, 'Jurusan': jurusan,
+        'Jenis_Kelamin': jenis_kelamin, 'Status_Bekerja': status_bekerja
     }
-
-    with st.spinner('Menghitung Chakra...'):
-        processed_data = preprocess_new_data(new_data)
-        predicted_salary = model.predict(processed_data)
-
+    
+    processed = preprocess_new_data(input_data)
+    prediction = model.predict(processed)
+    
     st.balloons()
-    st.markdown("---")
-    st.subheader('💰 Hasil Estimasi Tunjangan Misi:')
-    st.success(f'### **{predicted_salary[0]:.2f} Juta Ryo (Rupiah)**')
-    st.info("Ingat! Ini hanyalah prediksi. Teruslah berlatih seperti Lee agar hasilnya melampaui ekspektasi! 👊")
-
-# --- FOOTER ---
-st.markdown("<br><br><p style='text-align: center; color: grey;'>Dibuat dengan semangat api Konoha 🔥</p>", unsafe_allow_html=True)
+    st.success(f"### 💰 Estimasi Gaji: {prediction[0]:.2f} Juta Rupiah")
