@@ -1,9 +1,68 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
 from sklearn.preprocessing import StandardScaler
+
+# --- CUSTOM CSS UNTUK TEMA TAHUN BARU CINA ---
+st.set_page_config(page_title="Prediksi Gaji Imlek", page_icon="🧧")
+
+st.markdown("""
+    <style>
+    /* Mengatur latar belakang utama */
+    .stApp {
+        background-color: #8B0000; /* Merah Tua */
+        color: #FFD700; /* Emas */
+    }
+    
+    /* Mengatur warna sidebar jika ada */
+    [data-testid="stSidebar"] {
+        background-color: #5C0000;
+    }
+
+    /* Mengubah warna teks judul dan header */
+    h1, h2, h3, p, span, label {
+        color: #FFD700 !important;
+        font-family: 'Trebuchet MS', sans-serif;
+    }
+
+    /* Kustomisasi tombol */
+    .stButton>button {
+        background-color: #FFD700;
+        color: #8B0000;
+        border-radius: 20px;
+        border: 2px solid #FFA500;
+        font-weight: bold;
+        width: 100%;
+        height: 3em;
+    }
+    
+    .stButton>button:hover {
+        background-color: #FFA500;
+        color: white;
+    }
+
+    /* Input styling */
+    .stSlider, .stSelectbox, .stRadio {
+        background-color: rgba(255, 215, 0, 0.1);
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #FFD700;
+    }
+
+    /* Animasi Lampion Sederhana (Opsional) */
+    .lampion-text {
+        text-align: center;
+        font-size: 50px;
+        margin-bottom: 0px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# Tambah dekorasi Header
+st.markdown("<div class='lampion-text'>🏮 🐉 🏮</div>", unsafe_allow_html=True)
+
+# --- KODE ASLI (TIDAK DIUBAH) ---
 
 # Load the pre-trained model and scaler
 @st.cache_resource
@@ -25,20 +84,20 @@ feature_cols_final = ['Usia', 'Durasi_Jam', 'Nilai_Ujian', 'Pendidikan', 'Jurusa
 education_classes = np.array(['SMA', 'SMK', 'D3', 'S1', 'S2'])
 major_classes = np.array(['Administrasi', 'Desain Grafis', 'Otomotif', 'Teknik Las', 'Teknik Listrik'])
 
-# Streamlit App Title
-st.title('Prediksi Gaji Pertama Peserta Pelatihan Vokasi')
-st.write('Aplikasi ini memprediksi gaji pertama berdasarkan data peserta pelatihan.')
+# --- UI MODIFIKASI TEMA ---
+st.title('🧧 Prediksi Keberuntungan Gaji Pertama')
+st.write('Rayakan Tahun Baru Cina dengan melihat potensi kemakmuran finansial Anda dari hasil pelatihan vokasi.')
 
 # User Inputs
-st.header('Data Peserta')
+st.header('🧧 Data Keberuntungan Peserta')
 
 usia = st.slider('Usia', 18, 60, 25)
 durasi_jam = st.slider('Durasi Pelatihan (Jam)', 20, 100, 60)
 nilai_ujian = st.slider('Nilai Ujian', 50.0, 100.0, 75.0, step=0.1)
-pendidikan = st.selectbox('Pendidikan', ['SMA', 'SMK', 'D3', 'S1', 'S2'])
-jurusan = st.selectbox('Jurusan', ['Administrasi', 'Desain Grafis', 'Otomotif', 'Teknik Las', 'Teknik Listrik'])
+pendidikan = st.selectbox('Tingkat Pendidikan', ['SMA', 'SMK', 'D3', 'S1', 'S2'])
+jurusan = st.selectbox('Bidang Keahlian (Jurusan)', ['Administrasi', 'Desain Grafis', 'Otomotif', 'Teknik Las', 'Teknik Listrik'])
 jenis_kelamin = st.radio('Jenis Kelamin', ['Laki-laki', 'Wanita'])
-status_bekerja = st.radio('Status Bekerja', ['Belum Bekerja', 'Sudah Bekerja'])
+status_bekerja = st.radio('Status Karir Saat Ini', ['Belum Bekerja', 'Sudah Bekerja'])
 
 # Preprocessing Function for new data
 def preprocess_new_data(data):
@@ -80,7 +139,7 @@ def preprocess_new_data(data):
     return preprocessed_input
 
 
-if st.button('Prediksi Gaji Pertama'):
+if st.button('🧧 Prediksi Kemakmuran (Gaji)'):
     new_data = {
         'Usia': usia,
         'Durasi_Jam': durasi_jam,
@@ -94,5 +153,10 @@ if st.button('Prediksi Gaji Pertama'):
     processed_data = preprocess_new_data(new_data)
     predicted_salary = model.predict(processed_data)
 
-    st.subheader('Hasil Prediksi:')
-    st.success(f'Gaji Pertama yang Diprediksi: {predicted_salary[0]:.2f} Juta Rupiah')
+    st.subheader('Estimasi Berkah Gaji Anda:')
+    # Menampilkan hasil dengan kotak sukses bertema emas/merah
+    st.balloons()
+    st.success(f'恭喜发财 (Gong Xi Fa Cai)! Gaji Pertama yang Diprediksi: Rp {predicted_salary[0]:.2f} Juta Rupiah')
+
+st.markdown("---")
+st.markdown("<p style='text-align: center;'>Semoga Tahun Ini Membawa Keberuntungan dan Kesuksesan! 🧧🐉</p>", unsafe_allow_html=True)
