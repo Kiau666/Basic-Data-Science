@@ -35,7 +35,7 @@ st.header('Data Peserta')
 usia = st.slider('Usia', 18, 60, 25)
 durasi_jam = st.slider('Durasi Pelatihan (Jam)', 20, 100, 60)
 nilai_ujian = st.slider('Nilai Ujian', 50.0, 100.0, 75.0, step=0.1)
-pendidikan = st.selectbox('Pendidikan', ['SMA', 'SMK', 'D3', 'S1', 'S2']
+pendidikan = st.selectbox('Pendidikan', ['SMA', 'SMK', 'D3', 'S1', 'S2'])
 jurusan = st.selectbox('Jurusan', ['Administrasi', 'Desain Grafis', 'Otomotif', 'Teknik Las', 'Teknik Listrik'])
 jenis_kelamin = st.radio('Jenis Kelamin', ['Laki-laki', 'Wanita'])
 status_bekerja = st.radio('Status Bekerja', ['Belum Bekerja', 'Sudah Bekerja'])
