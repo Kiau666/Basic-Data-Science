@@ -1,46 +1,113 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
 from sklearn.preprocessing import StandardScaler
 
-# Load the pre-trained model and scaler
+# --- KONFIGURASI HALAMAN ---
+st.set_page_config(
+    page_title="Konoha Salary Predictor",
+    page_icon="🍥",
+    layout="wide"
+)
+
+# --- CUSTOM CSS (THEMA NARUTO) ---
+st.markdown("""
+    <style>
+    /* Background & Font */
+    .stApp {
+        background: linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)), 
+                    url("https://images.alphacoders.com/134/1341995.png");
+        background-size: cover;
+    }
+    
+    /* Title Styling */
+    .main-title {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #E8691E; /* Naruto Orange */
+        text-align: center;
+        text-shadow: 2px 2px #203A43;
+        font-weight: bold;
+        font-size: 50px;
+    }
+
+    /* Card Styling */
+    div.stButton > button:first-child {
+        background-color: #E8691E;
+        color: white;
+        border-radius: 20px;
+        border: 2px solid #203A43;
+        padding: 10px 24px;
+        font-weight: bold;
+        transition: 0.3s;
+        width: 100%;
+    }
+    
+    div.stButton > button:first-child:hover {
+        background-color: #203A43;
+        color: #E8691E;
+        border: 2px solid #E8691E;
+    }
+
+    /* Sidebar Styling */
+    .css-1d391kg {
+        background-color: #203A43;
+    }
+
+    /* Success Box */
+    .stSuccess {
+        background-color: rgba(232, 105, 30, 0.2);
+        border: 1px solid #E8691E;
+        color: #203A43;
+    }
+    </style>
+    """, unsafe_state=True)
+
+# --- LOAD MODEL ---
 @st.cache_resource
 def load_model_and_scaler():
+    # Pastikan file ini ada di direktori yang sama
     with open('model_gb.pkl', 'rb') as file:
         model = pickle.load(file)
     with open('scaler.pkl', 'rb') as file:
         scaler = pickle.load(file)
     return model, scaler
 
-model, scaler = load_model_and_scaler()
+try:
+    model, scaler = load_model_and_scaler()
+except FileNotFoundError:
+    st.error("⚠️ File model_gb.pkl atau scaler.pkl tidak ditemukan! Pastikan file model sudah diupload.")
 
-# Define the feature columns and their order used during training
+# --- DATA CONFIG ---
 feature_cols_final = ['Usia', 'Durasi_Jam', 'Nilai_Ujian', 'Pendidikan', 'Jurusan',
                        'Jenis_Kelamin_Laki-laki', 'Jenis_Kelamin_Wanita',
                        'Status_Bekerja_Belum Bekerja', 'Status_Bekerja_Sudah Bekerja']
 
-# Define the possible categories for categorical features (used for Label and One-Hot Encoding)
 education_classes = np.array(['D3', 'S1', 'SMA', 'SMK'])
 major_classes = np.array(['Administrasi', 'Desain Grafis', 'Otomotif', 'Teknik Las', 'Teknik Listrik'])
 
-# Streamlit App Title
-st.title('Prediksi Gaji Pertama Peserta Pelatihan Vokasi')
-st.write('Aplikasi ini memprediksi gaji pertama berdasarkan data peserta pelatihan.')
+# --- UI LAYOUT ---
+st.markdown('<p class="main-title">🍥 Papan Misi Konoha: Prediksi Ryo</p>', unsafe_allow_html=True)
+st.write("<p style='text-align: center;'>Tentukan masa depan Shinobi-mu! Masukkan data untuk memprediksi gaji pertama (Ryo).</p>", unsafe_allow_html=True)
+st.divider()
 
-# User Inputs
-st.header('Data Peserta')
+# Gunakan kolom untuk layout yang lebih rapi
+col1, col2 = st.columns([1, 1], gap="medium")
 
-usia = st.slider('Usia', 18, 60, 25)
-durasi_jam = st.slider('Durasi Pelatihan (Jam)', 20, 100, 60)
-nilai_ujian = st.slider('Nilai Ujian', 50.0, 100.0, 75.0, step=0.1)
-pendidikan = st.selectbox('Pendidikan', ['D3', 'S1', 'SMA', 'SMK'])
-jurusan = st.selectbox('Jurusan', ['Administrasi', 'Desain Grafis', 'Otomotif', 'Teknik Las', 'Teknik Listrik'])
-jenis_kelamin = st.radio('Jenis Kelamin', ['Laki-laki', 'Wanita'])
-status_bekerja = st.radio('Status Bekerja', ['Belum Bekerja', 'Sudah Bekerja'])
+with col1:
+    st.subheader("👤 Profil Shinobi")
+    usia = st.slider('Usia (Tahun)', 18, 60, 25)
+    pendidikan = st.selectbox('Tingkat Akademi (Pendidikan)', education_classes)
+    jenis_kelamin = st.radio('Jenis Kelamin', ['Laki-laki', 'Wanita'], horizontal=True)
+    status_bekerja = st.radio('Status Saat Ini', ['Belum Bekerja', 'Sudah Bekerja'], horizontal=True)
 
-# Preprocessing Function for new data
+with col2:
+    st.subheader("📜 Spesialisasi Jutsu")
+    jurusan = st.selectbox('Bidang Keahlian (Jurusan)', major_classes)
+    durasi_jam = st.number_input('Total Jam Latihan (Durasi)', 20, 1000, 60)
+    nilai_ujian = st.slider('Skor Ujian Akhir', 50.0, 100.0, 75.0, step=0.1)
+
+# --- PREPROCESSING FUNCTION ---
 def preprocess_new_data(data):
     new_df = pd.DataFrame([data])
 
@@ -71,16 +138,15 @@ def preprocess_new_data(data):
         new_df['Status_Bekerja_Sudah Bekerja'] = 1
 
     new_df = new_df.drop(columns=['Jenis_Kelamin', 'Status_Bekerja'])
-
     preprocessed_input_df = new_df[feature_cols_final]
-
+    
+    # Scaling
     preprocessed_input_scaled_array = scaler.transform(preprocessed_input_df)
-    preprocessed_input = pd.DataFrame(preprocessed_input_scaled_array, columns=feature_cols_final)
+    return pd.DataFrame(preprocessed_input_scaled_array, columns=feature_cols_final)
 
-    return preprocessed_input
-
-
-if st.button('Prediksi Gaji Pertama'):
+# --- PREDICTION LOGIC ---
+st.write("") # Spacer
+if st.button('🔥 ANALISIS JALAN NINJAKU!'):
     new_data = {
         'Usia': usia,
         'Durasi_Jam': durasi_jam,
@@ -91,8 +157,15 @@ if st.button('Prediksi Gaji Pertama'):
         'Status_Bekerja': status_bekerja
     }
 
-    processed_data = preprocess_new_data(new_data)
-    predicted_salary = model.predict(processed_data)
+    with st.spinner('Menghitung Chakra...'):
+        processed_data = preprocess_new_data(new_data)
+        predicted_salary = model.predict(processed_data)
 
-    st.subheader('Hasil Prediksi:')
-    st.success(f'Gaji Pertama yang Diprediksi: {predicted_salary[0]:.2f} Juta Rupiah')
+    st.balloons()
+    st.markdown("---")
+    st.subheader('💰 Hasil Estimasi Tunjangan Misi:')
+    st.success(f'### **{predicted_salary[0]:.2f} Juta Ryo (Rupiah)**')
+    st.info("Ingat! Ini hanyalah prediksi. Teruslah berlatih seperti Lee agar hasilnya melampaui ekspektasi! 👊")
+
+# --- FOOTER ---
+st.markdown("<br><br><p style='text-align: center; color: grey;'>Dibuat dengan semangat api Konoha 🔥</p>", unsafe_allow_html=True)
